@@ -1,0 +1,128 @@
+<!doctype html>
+<html ng-app="toDoApp" ng-controller="toDoController">
+  <head>
+    <title>TODO Tasks App</title>
+    <script	src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.17/angular.min.js"></script>
+    <style>
+      body {
+        color: #444;
+        font-size: 14px;
+        font-family: "Roboto", sans-serif;
+        padding: 20px;
+      }
+      h3 {
+        margin-top: 0px;
+      }
+      a {
+        color: #444;
+        text-decoration: none;
+      }
+      td {
+        min-width: 300px;
+        padding-left: 20px;
+        padding-right: 20px;
+        vertical-align: top;
+      }
+      .complete {
+        text-decoration: line-through;
+        color: #999;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>To-do List</h1>
+    <h2>Tasks</h2>
+      <table>
+        <tr>
+            <td>
+                <h3>All tasks</h3>
+                <span ng-hide="alltasks.length">You have not Added any Tasks yet, please Make a list!</span>
+                <div ng-repeat="tasks in alltasks">
+                  <radio>{{$index+1}}.</radio>
+                    {{tasks.taskname}}    
+                </div>
+            </td>
+            <td>
+          <h3>Pending Task ({{ pending.length }})</h3>
+            <span ng-hide="pending.length">You have no Pending tasks!</span>
+            <div ng-repeat="task in pending">
+              <input type="checkbox" ng-click="transferTo(task.id)" /> {{ task.taskname }}
+              <button ng-click="remove(task.id)" >X</button>
+              <br />
+            </div>
+        </td><td>
+          <div ng-show="completed.length">
+            <h3>Completed ({{ completed.length }})</h3>
+              <div ng-repeat="task in completed">
+                <input type="checkbox" checked /> <span class="complete">{{ task.taskname }}</span>
+                <button ng-click="remove(task.id)" >X</button>
+                <br />
+              </div>
+          </div>
+        </td></tr>
+      </table>
+    <h2>Add a Task</h2>
+      <form ng-submit="addTask()">
+        <input type="text" placeholder="Description" ng-model="newTaskName" />
+        <input type="submit" value="Add" />
+      </form>
+    <script>
+      angular.module('toDoApp', [])
+        .controller('toDoController', ['$scope','$http', function($scope, $http) {
+          $scope.newTaskName = '';
+
+          //get the default list of all Tasks
+          $http.get('http://localhost:8001/task').
+            then(function(response) {
+                $scope.alltasks = response.data.all;
+                $scope.pending =response.data.pending;
+                $scope.completed = response.data.completed;
+            });
+
+            // add new tasks into list
+          $scope.addTask = function() {
+            var name = $scope.newTaskName;
+            if (name && $scope.alltasks.indexOf(name) == -1
+                     && $scope.completed.indexOf(name)) {
+                      $http({
+                          method: 'POST',
+                          url: 'http://localhost:8001/task?taskname='+name,
+                          headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                          }
+                        }).success(function (response) {
+                            $scope.alltasks = response.all;
+                            $scope.pending =response.pending;
+                            $scope.completed = response.completed;
+                            $scope.newTaskName = '';
+                        });
+              }
+          };
+
+          //change task status to Complete
+          $scope.transferTo = function(taskId) {
+            $http({
+              method : 'put',
+              url : 'http://localhost:8001/task/'+taskId
+            }).success(function(response){
+              $scope.alltasks = response.all;
+              $scope.pending =response.pending;
+              $scope.completed = response.completed;
+            });
+          }
+
+          // to remove the tasks
+          $scope.remove = function(taskId){
+              $http({
+              method : 'DELETE',
+              url : 'http://localhost:8001/task/'+taskId
+            }).success(function(response){
+              $scope.alltasks = response.all;
+              $scope.pending =response.pending;
+              $scope.completed = response.completed;
+            });
+          }  
+        }]);
+    </script>
+  </body>
+</html>
